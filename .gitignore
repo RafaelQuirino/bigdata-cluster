@@ -1,3 +1,10 @@
+# Systems directory from base and volumes used by the cluster 
+base/systems/*
+base/systems/*/
+cluster/volumes/*
+cluster/volumes/*/
+!cluster/volumes/clean.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

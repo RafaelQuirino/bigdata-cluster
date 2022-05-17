@@ -1,0 +1,229 @@
+version: "3.7"
+
+services:
+
+  master:
+    build: '../base'
+    hostname: master
+    depends_on:
+      - hivemetastore
+    environment:
+      # Config vars
+      # (These vars are used in ../base/entrypoint.sh)
+      FLAGS_HOME: /flags    
+      HADOOP_NODE: namenode
+      # Master/namenode vars
+      SPARK_LOCAL_IP: 172.28.1.1
+      HIVE_CONFIGURE: yes, please # Just to turn the env var on...
+      SPARK_LOCAL_HOSTNAME: master
+      SPARK_MASTER_WEBUI_PORT: 8089 # Default is 8080
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      # Vars below are common in all nodes,
+      # but i'm unable to make extensions work...
+      SPARK_PUBLIC_DNS: localhost
+      SPARK_MASTER_HOST: 172.28.1.1
+    ports:
+      # Hadoop namenode WEB UI
+      - 9870:9870
+      # Hadoop secondary namenode WEB UI
+      # - 9868:9868
+      - 9871:9868 # I dont know, kinda makes more sense...
+      # Hadoop web (?)
+      - 50070:50070 # Maybe irrelevant...
+      # YARN WEB UI
+      - 8088:8088
+      # Spark Master WEB UI
+      # - 8080:8080 # Changed in favor of Airflow
+      - 8089:8089
+      # Spark job WEB UI: increments for each successive job
+      - 4040:4040
+      - 4041:4041
+      - 4042:4042
+      - 4043:4043
+      # ...
+      # Spark History server WEB UI
+      - 18080:18080
+      # Hive
+      - 10000:10000 # JDBC port
+      - 9083:9083   # Thrift port
+      # Jupyterlab WEB UI
+      - 8888:8888
+      # Airflow WEB UI
+      - 8080:8080
+    expose:
+      - 4040-5050 # For Spark jobs WEB UI
+    volumes:
+      - ./data:/data # To hold test data (or any user data). Shared in all nodes.
+      - ./workspace:/workspace # To hold dev files for test (or any user dev files). Shared in all nodes.
+      - ./dags:/root/airflow/dags # To hold airflow dags (or dag projects).
+      - ./volumes/master/dfs:/dfs               # The dfs folder is for the datalake,
+      - ./volumes/master/flags:/flags           # HDFS metadata (since this is the namenode),
+      - ./volumes/master/airflow:/root/airflow  # flags for flag files and airflow to save airflow's state (including db).
+    networks:
+      spark_net:
+        ipv4_address: 172.28.1.1
+    extra_hosts:
+      - "worker1:172.28.1.2"
+      - "worker2:172.28.1.3"
+      - "hivemetastore:172.28.1.4"
+      - "huemetastore:172.28.1.5"
+      - "hue:172.28.1.6"
+
+  worker1:
+    build: '../base'
+    hostname: worker1
+    depends_on:
+      - hivemetastore
+      - master
+    environment:
+      # Datanode 1 (worker1)
+      SPARK_LOCAL_HOSTNAME: worker1
+      SPARK_WORKER_PORT: 8881
+      SPARK_WORKER_WEBUI_PORT: 8081
+      SPARK_LOCAL_IP: 172.28.1.2
+      # Vars below are common in all worker/datanode nodes,
+      # but i'm unable to make extensions work...
+      HADOOP_NODE: datanode # Config var (../base/entrypoint.sh)
+      SPARK_PUBLIC_DNS: localhost
+      SPARK_MASTER_HOST: 172.28.1.1
+      SPARK_MASTER_ADDRESS: spark://master:7077
+    ports:
+      # Hadoop datanode UI
+      - 9864:9864
+      #Spark worker UI
+      - 8081:8081
+    volumes:
+      - ./data:/data
+      - ./workspace:/workspace
+      - ./volumes/worker1/dfs:/dfs # For HFDS blocks
+    networks:
+      spark_net:
+        ipv4_address: 172.28.1.2
+    extra_hosts:
+      - "master:172.28.1.1"
+      - "worker2:172.28.1.3"
+      - "hivemetastore:172.28.1.4"
+      - "huemetastore:172.28.1.5"
+      - "hue:172.28.1.6"
+
+  worker2:
+    build: '../base'
+    hostname: worker2
+    depends_on:
+      - hivemetastore
+      - master
+    environment:
+      # Datanode 2 (worker2)
+      SPARK_LOCAL_HOSTNAME: worker2
+      SPARK_WORKER_PORT: 8882
+      SPARK_WORKER_WEBUI_PORT: 8082
+      SPARK_LOCAL_IP: 172.28.1.3
+      HADOOP_DATANODE_UI_PORT: 9865
+      # Vars below are common in all worker/datanode nodes,
+      # but i'm unable to make extensions work...
+      HADOOP_NODE: datanode # Config var (../base/entrypoint.sh)
+      SPARK_PUBLIC_DNS: localhost
+      SPARK_MASTER_HOST: 172.28.1.1
+      SPARK_MASTER_ADDRESS: spark://master:7077
+    ports:
+      # Hadoop datanode UI
+      - 9865:9865
+      # Spark worker UI
+      - 8082:8082
+    volumes:
+      - ./data:/data
+      - ./workspace:/workspace
+      - ./volumes/worker2/dfs:/dfs # For HFDS blocks
+    networks:
+      spark_net:
+        ipv4_address: 172.28.1.3
+    extra_hosts:
+      - "master:172.28.1.1"
+      - "worker1:172.28.1.2"
+      - "hivemetastore:172.28.1.4"
+      - "huemetastore:172.28.1.5"
+      - "hue:172.28.1.6"
+
+  hivemetastore:
+    image: postgres:11.5
+    hostname: hivemetastore
+    environment:
+      POSTGRES_PASSWORD: new_password
+    expose:
+      - 5432
+    ports:
+      - 54321:5432
+    volumes:
+      - ./conf/hive/init-hive-db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./volumes/hive/metadata:/var/lib/postgresql/data # Persist hive postgresql data (metadata)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      spark_net:
+        ipv4_address: 172.28.1.4
+    extra_hosts:
+      - "master:172.28.1.1"
+      - "worker1:172.28.1.2"
+      - "worker2:172.28.1.3"
+      - "huemetastore:172.28.1.5"
+      - "hue:172.28.1.6"
+
+  huemetastore:
+    image: postgres:11.5
+    hostname: huemetastore
+    environment:
+      POSTGRES_PASSWORD: new_password
+    expose:
+      - 5432
+    ports:
+      - 54322:5432
+    volumes:
+      - ./conf/hue/init-hue-db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./volumes/hue/metadata:/var/lib/postgresql/data # Persist hue postgresql data (metadata)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      spark_net:
+        ipv4_address: 172.28.1.5
+    extra_hosts:
+      - "master:172.28.1.1"
+      - "worker1:172.28.1.2"
+      - "worker2:172.28.1.3"
+      - "hivemetastore:172.28.1.4"
+      - "hue:172.28.1.6"
+
+  hue:
+    image: fjardim/hue
+    hostname: hue
+    ports:
+      - 8889:8888 # WEB UI
+    volumes:
+      - ./conf/hue/hue-overrides.ini:/usr/share/hue/desktop/conf/z-hue.ini
+    depends_on:
+      - "huemetastore"
+      - "hivemetastore"
+      - "master"
+      - "worker1"
+      - "worker2"
+    networks:
+      spark_net:
+        ipv4_address: 172.28.1.6
+    extra_hosts:
+      - "master:172.28.1.1"
+      - "worker1:172.28.1.2"
+      - "worker2:172.28.1.3"
+      - "hivemetastore:172.28.1.4"
+      - "huemetastore:172.28.1.5"
+
+networks:
+  spark_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16

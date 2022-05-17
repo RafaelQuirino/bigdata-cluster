@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/ClusterSetup.html -->
+<configuration>
+
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>/dfs/name</value>
+    </property>
+
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>/dfs/data</value>
+    </property>
+
+    <!-- 
+        Replication factor. 
+        Files you store on HDFS will be stored on this many machines.
+     -->
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+
+    <!-- Not sure what is this yet... -->
+    <property>
+        <name>dfs.webhdfs.enabled</name>
+        <value>true</value>
+    </property>
+
+    <property><name>dfs.permissions.enabled</name><value>false</value></property>
+    <property><name>dfs.namenode.rpc-bind-host</name><value>0.0.0.0</value></property>
+    <property><name>dfs.namenode.servicerpc-bind-host</name><value>0.0.0.0</value></property>
+    <property><name>dfs.namenode.http-bind-host</name><value>0.0.0.0</value></property>
+    <property><name>dfs.namenode.https-bind-host</name><value>0.0.0.0</value></property>
+    <property><name>dfs.client.use.datanode.hostname</name><value>true</value></property>
+    <property><name>dfs.datanode.use.datanode.hostname</name><value>true</value></property>
+    <property><name>spark.sql.warehouse.dir</name><value>/user/hive/warehouse</value></property>
+</configuration>
