@@ -19,7 +19,7 @@ if [ "${HADOOP_NODE}" == "namenode" ]; then
   mapred --daemon start historyserver
 
   # Jupyter lab
-  screen -S jupyterlab -d -m jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token= &
+  screen -S jupyterlab -d -m jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token=
 
   # Airflow
   screen -S airflow -d -m airflow standalone
