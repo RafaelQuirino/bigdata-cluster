@@ -85,7 +85,7 @@ if [ "${HADOOP_NODE}" == "namenode" ]; then
   mapred --daemon stop historyserver
   screen -X -S jupyterlab quit
   screen -X -S airflow quit
-  rm airflow-webserver.pid
+  rm /root/airflow/airflow-webserver.pid
 fi
 if [ -n "${HIVE_CONFIGURE}" ]; then
   screen -X -S hivemetastore quit
