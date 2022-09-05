@@ -31,7 +31,6 @@
     <property>
         <name>yarn.nodemanager.resource.memory-mb</name>
         <value>8192</value>
-        <!-- <value>16384</value> -->
     </property>
 
     <!-- Resource manager can only allocate memory to containers in increments
@@ -44,7 +43,6 @@
     <property>
         <name>yarn.scheduler.maximum-allocation-mb</name>
         <value>4096</value>
-        <!-- <value>8192</value> -->
     </property>
     <property>
         <name>yarn.scheduler.minimum-allocation-mb</name>
@@ -57,7 +55,6 @@
     <property>
         <name>yarn.scheduler.maximum-allocation-vcores</name>
         <value>4</value>
-        <!-- <value>6</value> -->
     </property>
     <property>
         <name>yarn.scheduler.minimum-allocation-vcores</name>
